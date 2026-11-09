@@ -1,0 +1,1005 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fotball-IQ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Endless football decision puzzles in Norwegian and English. Fotball-IQ: uendelig mange taktiske oppgaver.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: one column "coach's clipboard" — scoreboard strip, question, tactics board, feedback card. */
+:root {
+  --bg: #e9efe8;
+  --surface: #ffffff;
+  --surface-2: #f3f7f2;
+  --fg: #12221a;
+  --muted: #56685d;
+  --line: #cfdad1;
+  --accent: #0f7a4a;
+  --accent-fg: #ffffff;
+  --you: #f2b705;
+  --good: #138a4b;
+  --bad: #c8372d;
+  --warn: #d97a06;
+  --pitch-a: #2f8f55;
+  --pitch-b: #2a854e;
+  --chalk: rgba(255,255,255,.85);
+  --team: #1f5fd1;
+  --opp: #d23a32;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --font-body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1611; --surface: #15211a; --surface-2: #1b2a21; --fg: #e5efe8; --muted: #9db2a4;
+    --line: #2a3d31; --accent: #38c27e; --accent-fg: #06150d; --you: #ffcc33; --good: #3ccf84;
+    --bad: #ff6b5e; --warn: #ffa63d; --pitch-a: #1f6b3e; --pitch-b: #1c6339; --chalk: rgba(255,255,255,.75);
+    --team: #3d7cf0; --opp: #e5483f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1611; --surface: #15211a; --surface-2: #1b2a21; --fg: #e5efe8; --muted: #9db2a4;
+  --line: #2a3d31; --accent: #38c27e; --accent-fg: #06150d; --you: #ffcc33; --good: #3ccf84;
+  --bad: #ff6b5e; --warn: #ffa63d; --pitch-a: #1f6b3e; --pitch-b: #1c6339; --chalk: rgba(255,255,255,.75);
+  --team: #3d7cf0; --opp: #e5483f; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px 32px;
+}
+.wrap { max-width: 920px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.brand h1 { font-family: var(--font-display); font-weight: 800; font-size: 2.1rem; letter-spacing: .01em; margin: 0; line-height: 1; text-transform: uppercase; }
+.brand h1 span { color: var(--accent); }
+.brand p { margin: 0; color: var(--muted); font-size: .95rem; }
+.top-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+button { font: inherit; cursor: pointer; }
+button:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--you); outline-offset: 2px; }
+.btn {
+  border: 1px solid var(--line); background: var(--surface); color: var(--fg);
+  padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: .95rem;
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.lang { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.lang button { border: 0; background: transparent; color: var(--muted); padding: 7px 11px; font-weight: 700; font-family: var(--font-display); font-size: 1rem; letter-spacing: .06em; }
+.lang button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+
+.roles { display: flex; gap: 6px; flex-wrap: wrap; }
+.roles .label { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .08em; font-size: .85rem; color: var(--muted); align-self: center; margin-right: 4px; }
+.chip {
+  border: 1px solid var(--line); background: var(--surface); color: var(--fg);
+  padding: 6px 12px; border-radius: 999px; font-weight: 600; font-size: .92rem;
+}
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+.board { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.stat { padding: 8px 12px; border-left: 1px solid var(--line); min-width: 0; }
+.stat:first-child { border-left: 0; }
+.stat .k { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .08em; font-size: .78rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat .v { font-family: var(--font-display); font-weight: 700; font-size: 1.6rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.lvlbar { height: 4px; background: var(--surface-2); border-radius: 2px; margin-top: 4px; overflow: hidden; }
+.lvlbar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .4s; }
+
+.question { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.question h2 { font-family: var(--font-display); font-weight: 700; font-size: 1.55rem; line-height: 1.15; margin: 0; text-wrap: balance; min-width: 0; flex: 1 1 320px; }
+.meta { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tag { display: inline-block; font-family: var(--font-display); text-transform: uppercase; letter-spacing: .08em; font-size: .78rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); margin-right: 6px; }
+
+.pitch-wrap { background: var(--pitch-b); border-radius: var(--radius); padding: 6px; box-shadow: 0 1px 0 var(--line); }
+svg.pitch { display: block; width: 100%; height: auto; max-width: 100%; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.pl text { font-family: var(--font-display); font-weight: 700; pointer-events: none; }
+.opt { cursor: pointer; }
+.opt .hit { fill: transparent; }
+.opt:hover .body, .opt:focus-visible .body { stroke: var(--you); stroke-width: .5; }
+.opt:focus { outline: none; }
+.opt:focus-visible .hit { stroke: var(--you); stroke-width: .3; stroke-dasharray: .8 .6; }
+.spot .ring { fill: rgba(255,255,255,.18); stroke: #fff; stroke-width: .3; stroke-dasharray: .9 .6; }
+.spot:hover .ring { fill: rgba(255,255,255,.35); }
+.goal-hit { fill: rgba(255,255,255,0); }
+.opt.goal:hover .goal-hit { fill: rgba(242,183,5,.35); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: .85rem; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 1.5px solid #fff; box-shadow: 0 0 0 1px var(--line); }
+
+.controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: space-between; align-items: center; }
+.controls .left, .controls .right { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.feedback { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.feedback .verdict { font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.feedback .verdict.ok { color: var(--good); }
+.feedback .verdict.no { color: var(--bad); }
+.feedback .pts { font-size: 1rem; color: var(--muted); font-weight: 700; }
+.feedback p { margin: 0; max-width: 70ch; }
+.feedback .line b { font-weight: 600; }
+.feedback .tip { border-top: 1px solid var(--line); padding-top: 8px; color: var(--muted); font-size: .95rem; }
+.feedback .tip strong { color: var(--fg); font-family: var(--font-display); text-transform: uppercase; letter-spacing: .06em; font-size: .85rem; margin-right: 6px; }
+.feedback.idle { color: var(--muted); }
+
+dialog { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--fg); padding: 0; width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 48px); }
+dialog::backdrop { background: rgba(5,15,10,.55); }
+.dlg { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+.dlg h3 { font-family: var(--font-display); font-size: 1.6rem; margin: 0; text-transform: uppercase; }
+.dlg ol { margin: 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: 8px; }
+.dlg li b { font-weight: 600; }
+.dlg table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.dlg th, .dlg td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.dlg th { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .06em; font-size: .85rem; color: var(--muted); }
+.dlg .row { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; color: var(--bad); font-weight: 600; }
+
+@media (max-width: 560px) {
+  .brand h1 { font-size: 1.7rem; }
+  .brand p { display: none; }
+  .stat { padding: 6px 8px; }
+  .stat .k { font-size: .66rem; letter-spacing: .04em; }
+  .stat .v { font-size: 1.25rem; }
+  .question h2 { font-size: 1.3rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1 id="appTitle">Fotball<span>-IQ</span></h1>
+      <p id="appSub"></p>
+    </div>
+    <div class="top-actions">
+      <button class="btn" id="btnPrinciples" type="button"></button>
+      <button class="btn" id="btnStats" type="button"></button>
+      <div class="lang" role="group" aria-label="Language / Språk">
+        <button type="button" id="langNo" aria-pressed="true">NO</button>
+        <button type="button" id="langEn" aria-pressed="false">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="roles" id="roles" aria-label="Role"></nav>
+
+  <section class="board" aria-live="polite">
+    <div class="stat"><div class="k" id="kScore"></div><div class="v" id="vScore">0</div></div>
+    <div class="stat"><div class="k" id="kStreak"></div><div class="v" id="vStreak">0</div></div>
+    <div class="stat"><div class="k" id="kBest"></div><div class="v" id="vBest">0</div></div>
+    <div class="stat"><div class="k" id="kAcc"></div><div class="v" id="vAcc">–</div></div>
+    <div class="stat"><div class="k" id="kLevel"></div><div class="v" id="vLevel">1</div><div class="lvlbar"><i id="lvlFill"></i></div></div>
+  </section>
+
+  <div class="question">
+    <h2 id="qText"></h2>
+    <div class="meta"><span class="tag" id="qTag"></span><span id="qNum"></span></div>
+  </div>
+
+  <div class="pitch-wrap">
+    <svg class="pitch" id="pitch" viewBox="-4 -4 113 76" role="img" aria-label="Pitch"></svg>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <div class="controls">
+    <div class="left">
+      <button class="btn" id="btnHint" type="button"></button>
+      <button class="btn" id="btnSkip" type="button"></button>
+    </div>
+    <div class="right">
+      <button class="btn primary" id="btnNext" type="button" disabled></button>
+    </div>
+  </div>
+
+  <section class="feedback idle" id="feedback" aria-live="polite"></section>
+</div>
+
+<dialog id="dlgPrinciples"><div class="dlg">
+  <h3 id="pTitle"></h3>
+  <ol id="pList"></ol>
+  <div class="row"><button class="btn primary" type="button" data-close></button></div>
+</div></dialog>
+
+<dialog id="dlgStats"><div class="dlg">
+  <h3 id="sTitle"></h3>
+  <div style="overflow-x:auto"><table id="sTable"></table></div>
+  <div class="row" id="sRow">
+    <button class="btn" type="button" id="btnReset"></button>
+    <button class="btn primary" type="button" data-close></button>
+  </div>
+</div></dialog>
+
+<script>
+"use strict";
+/* ================= i18n ================= */
+const I18N = {
+  no: {
+    sub: "Uendelig mange taktiske oppgaver. Bli smartere på banen.",
+    principles: "Prinsipper", stats: "Statistikk", role: "Rolle",
+    roles: { mix: "Blandet", gk: "Keeper", def: "Forsvar", mid: "Midtbane", wing: "Kant", st: "Spiss" },
+    score: "Poeng", streak: "Rekke", best: "Rekord", acc: "Treff", level: "Nivå",
+    hint: "Vis hint (−50 %)", hintUsed: "Hint vist", skip: "Hopp over", next: "Neste oppgave →",
+    puzzle: "Oppgave", types: { pass: "Pasning", shoot: "Pasning / skudd", move: "Bevegelse", mark: "Forsvar", gk: "Utspill" },
+    q: {
+      pass: "Du har ballen. Hvem bør du passe til?",
+      shoot: "Du har ballen. Pasning eller skudd? Trykk på en medspiller eller på målet.",
+      gk: "Du er keeper og har ballen. Hvem bør få den for å starte angrepet?",
+      move: "Medspilleren din har ballen. Hvor bør du løpe for å få den?",
+      mark: "Motstanderen angriper. Hvem bør du markere?"
+    },
+    legend: { you: "Du", team: "Ditt lag", opp: "Motstander", spot: "Mulig posisjon", off: "Offsidelinje" },
+    you: "DU", shotLabel: "Skudd", spot: "posisjon {l}", player: "#{n}",
+    correct: "Riktig!", wrong: "Ikke det beste valget", skipped: "Hoppet over",
+    yourChoice: "Ditt valg", bestChoice: "Beste valg", tip: "Tips",
+    pts: "+{p} poeng",
+    r: {
+      blocked: "pasningslinjen er stengt av motspiller #{n}",
+      tight: "en motspiller står nær pasningslinjen",
+      marked: "en motspiller står helt inntil mottakeren",
+      pressure: "mottakeren er under press",
+      open: "mottakeren har god plass rundt seg",
+      offside: "mottakeren står offside",
+      long: "det er en lang og risikabel pasning",
+      forward: "ballen flyttes {d} m fremover",
+      backward: "den går bakover, men laget beholder ballen",
+      square: "den holder ballen trygt i laget",
+      box: "det gir en stor målsjanse",
+      dangerOwn: "mister vi ballen her, får motstanderen en sjanse foran vårt mål",
+      crowd: "det er for nær en medspiller, så du drar med deg en forsvarer",
+      shotGood: "du har fri sikt mot mål fra god avstand",
+      shotBlocked: "skuddet blir blokkert av {k} forsvarer(e)",
+      shotPoor: "vinkelen eller avstanden er for dårlig",
+      better: "en medspiller har en mye bedre sjanse",
+      far: "spilleren er for langt unna til at du rekker frem",
+      attOffside: "spilleren står offside, så faren er liten akkurat nå",
+      covered: "en medspiller dekker allerede denne spilleren",
+      laneCov: "en medspiller stenger allerede pasningen til spilleren",
+      danger: "spilleren står farlig til, nær vårt mål",
+      unmarked: "ingen markerer denne spilleren",
+      laneOpen: "ballføreren kan lett spille ballen dit",
+      lowThreat: "spilleren er langt fra vårt mål"
+    },
+    and: "og",
+    p: [
+      ["Skann før du får ballen", "Se over skulderen før pasningen kommer, så vet du hva du skal gjøre med den."],
+      ["Spill til ledig rom", "Velg medspilleren med mest plass og minst press, ikke den som står nærmest."],
+      ["Sjekk pasningslinjen", "Står en motspiller mellom deg og mottakeren, blir pasningen snappet opp."],
+      ["Fremover når det er trygt", "Spill fremover når linjen er åpen. Er den ikke det, behold ballen og spill på nytt."],
+      ["Hold deg onside", "Når pasningen slås, må du være på linje med eller bak nest bakerste motspiller."],
+      ["Lag trekanter", "Ikke stå ved siden av en medspiller. Spre dere, så får ballføreren flere valg."],
+      ["Vær uselvisk i boksen", "En umarkert medspiller midt foran mål er ofte bedre enn et skudd fra spiss vinkel."],
+      ["Marker den farligste", "I forsvar: dekk den umarkerte spilleren nærmest mål, og stå mellom spilleren og målet."],
+      ["Ingen sjanser foran eget mål", "Ikke slå risikable pasninger på tvers foran ditt eget mål."],
+      ["Keeperen er første angriper", "Finn den ledige spilleren raskt. Ofte er det backen eller en midtstopper som står bredt."]
+    ],
+    statsTitle: "Statistikk per rolle", colRole: "Rolle", colPlayed: "Spilt", colRight: "Riktige", colAcc: "Treff",
+    close: "Lukk", reset: "Nullstill alt", resetAsk: "Slette all fremgang?", yes: "Ja, slett", no: "Avbryt",
+    idle: "Velg ved å trykke på banen. Du får forklaring etter hvert svar."
+  },
+  en: {
+    sub: "Endless tactical puzzles. Get smarter on the pitch.",
+    principles: "Principles", stats: "Stats", role: "Role",
+    roles: { mix: "Mixed", gk: "Keeper", def: "Defender", mid: "Midfield", wing: "Winger", st: "Striker" },
+    score: "Score", streak: "Streak", best: "Best", acc: "Accuracy", level: "Level",
+    hint: "Show hint (−50%)", hintUsed: "Hint shown", skip: "Skip", next: "Next puzzle →",
+    puzzle: "Puzzle", types: { pass: "Passing", shoot: "Pass / shoot", move: "Movement", mark: "Defending", gk: "Distribution" },
+    q: {
+      pass: "You have the ball. Who should you pass to?",
+      shoot: "You have the ball. Pass or shoot? Tap a teammate or the goal.",
+      gk: "You're the keeper with the ball. Who should get it to start the attack?",
+      move: "Your teammate has the ball. Where should you run to receive it?",
+      mark: "The opponents are attacking. Who should you mark?"
+    },
+    legend: { you: "You", team: "Your team", opp: "Opponent", spot: "Possible spot", off: "Offside line" },
+    you: "YOU", shotLabel: "Shot", spot: "spot {l}", player: "#{n}",
+    correct: "Correct!", wrong: "Not the best choice", skipped: "Skipped",
+    yourChoice: "Your choice", bestChoice: "Best choice", tip: "Tip",
+    pts: "+{p} points",
+    r: {
+      blocked: "the passing lane is cut off by opponent #{n}",
+      tight: "an opponent is close to the passing lane",
+      marked: "an opponent is right next to the receiver",
+      pressure: "the receiver is under pressure",
+      open: "the receiver has plenty of space",
+      offside: "the receiver is offside",
+      long: "it's a long, risky pass",
+      forward: "it moves the ball {d} m forward",
+      backward: "it goes backwards, but the team keeps the ball",
+      square: "it keeps the ball safely in the team",
+      box: "it creates a big chance to score",
+      dangerOwn: "losing the ball here gives the opponent a chance in front of our goal",
+      crowd: "it's too close to a teammate, so you bring a defender with you",
+      shotGood: "you have a clear sight of goal from a good distance",
+      shotBlocked: "the shot gets blocked by {k} defender(s)",
+      shotPoor: "the angle or distance is too poor",
+      better: "a teammate has a much better chance",
+      far: "this player is too far away for you to reach",
+      attOffside: "this player is offside, so the danger is small right now",
+      covered: "a teammate is already covering this player",
+      laneCov: "a teammate already blocks the pass to this player",
+      danger: "this player is in a dangerous spot near our goal",
+      unmarked: "nobody is marking this player",
+      laneOpen: "the ball carrier can easily pass to them",
+      lowThreat: "this player is far from our goal"
+    },
+    and: "and",
+    p: [
+      ["Scan before you receive", "Check over your shoulder before the pass arrives, so you already know what to do with it."],
+      ["Pass into space", "Pick the teammate with the most space and least pressure, not just the closest one."],
+      ["Check the passing lane", "If an opponent stands between you and the receiver, the pass will be intercepted."],
+      ["Forward when it's safe", "Play forward when the lane is open. If it isn't, keep the ball and recycle."],
+      ["Stay onside", "When the pass is played, be level with or behind the second-last opponent."],
+      ["Make triangles", "Don't stand next to a teammate. Spread out so the ball carrier has more options."],
+      ["Be unselfish in the box", "An unmarked teammate in front of goal often beats a shot from a tight angle."],
+      ["Mark the most dangerous player", "When defending: cover the free player closest to goal, and stay between them and the goal."],
+      ["No risks in front of your own goal", "Don't play risky passes across your own box."],
+      ["The keeper is the first attacker", "Find the free player quickly. It's often a full-back or a centre-back standing wide."]
+    ],
+    statsTitle: "Stats by role", colRole: "Role", colPlayed: "Played", colRight: "Correct", colAcc: "Accuracy",
+    close: "Close", reset: "Reset everything", resetAsk: "Delete all progress?", yes: "Yes, delete", no: "Cancel",
+    idle: "Make your choice by tapping the pitch. You'll get an explanation after every answer."
+  }
+};
+let lang = "no";
+function tr(path, vars) {
+  let v = path.split(".").reduce((o, k) => (o == null ? o : o[k]), I18N[lang]);
+  if (typeof v !== "string") return v;
+  if (vars) v = v.replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? vars[k] : ""));
+  return v;
+}
+
+/* ================= persistence ================= */
+const SAVE_KEY = "fotball-iq.v1";
+const ROLE_KEYS = ["mix", "gk", "def", "mid", "wing", "st"];
+function freshStats() {
+  const roleStats = {}; ROLE_KEYS.forEach(r => roleStats[r] = { played: 0, right: 0 });
+  return { score: 0, streak: 0, bestStreak: 0, played: 0, right: 0, roleStats, role: "mix", lang: null };
+}
+let S = freshStats();
+function load() {
+  try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { const d = JSON.parse(raw); S = Object.assign(freshStats(), d); S.roleStats = Object.assign(freshStats().roleStats, d.roleStats || {}); } } catch (e) {}
+}
+function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} }
+const levelOf = () => Math.min(10, 1 + Math.floor(S.right / 6));
+
+/* ================= geometry ================= */
+const L = 105, W = 68, GY1 = 30.34, GY2 = 37.66;
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+function segDist(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy || 1e-9;
+  const t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2, tc = clamp(t, 0, 1);
+  return { d: Math.hypot(p.x - (a.x + tc * dx), p.y - (a.y + tc * dy)), t };
+}
+function offsideLine(defs) {
+  const xs = defs.map(o => o.x).sort((a, b) => b - a);
+  return Math.max(xs.length >= 2 ? xs[1] : 0, L / 2);
+}
+function inShotCone(p, o) {
+  if (o.x <= p.x + 0.4) return false;
+  const t = (o.x - p.x) / (L - p.x); if (t > 1) return false;
+  const y1 = p.y + (GY1 - p.y) * t, y2 = p.y + (GY2 - p.y) * t;
+  return o.y >= Math.min(y1, y2) - 0.8 && o.y <= Math.max(y1, y2) + 0.8;
+}
+function shotXG(p, defs) {
+  if (p.x >= L - 0.5) return { xg: 0, blockers: [] };
+  const a1 = Math.atan2(GY1 - p.y, L - p.x), a2 = Math.atan2(GY2 - p.y, L - p.x);
+  const th = Math.abs(a2 - a1) * 180 / Math.PI, d = Math.hypot(L - p.x, 34 - p.y);
+  let xg = Math.min(1, th / 38) * Math.exp(-Math.max(0, d - 6) / 18);
+  const blockers = defs.filter(o => !o.gk && inShotCone(p, o));
+  xg *= Math.pow(0.35, blockers.length);
+  return { xg, blockers };
+}
+
+/* ================= evaluation ================= */
+function evalPass(from, to, opps) {
+  const f = { kind: "pass" }; let s = 20;
+  const len = dist(from, to);
+  if (to.x > offsideLine(opps) + 0.3 && to.x > from.x) f.offside = true;
+  const allowed = 1.3 + 0.045 * len;
+  let laneMin = Infinity, blocker = null;
+  for (const o of opps) { const r = segDist(o, from, to); if (r.t < 0.08 || r.t > 0.92) continue; if (r.d < laneMin) { laneMin = r.d; blocker = o; } }
+  if (laneMin < allowed) f.blocked = blocker;
+  else if (laneMin < allowed + 2.5) { f.tight = true; s -= (allowed + 2.5 - laneMin) * 6; }
+  let p = Infinity; for (const o of opps) p = Math.min(p, dist(o, to));
+  if (p < 3.8) { f.marked = true; s -= 45; }
+  else if (p < 6) { f.pressure = true; s -= (6 - p) * 6; }
+  else { f.open = p >= 8; s += Math.min(p - 6, 8) * 1.5; }
+  const dx = to.x - from.x; f.dx = dx; s += clamp(dx, -25, 35) * 0.9;
+  if (len > 32) { f.long = true; s -= (len - 30) * 1.2; }
+  if (to.x < 20 && to.y > 14 && to.y < 54 && p < 8) { f.dangerOwn = true; s -= 25; }
+  if (to.x > 70 && !f.blocked && !f.offside && !f.marked) { const x = shotXG(to, opps).xg; s += x * 90; if (x > 0.25) f.box = true; }
+  if (f.offside || f.blocked) s -= 100;
+  f.score = s; f.invalid = !!(f.offside || f.blocked);
+  return f;
+}
+function evalShot(from, opps) {
+  const r = shotXG(from, opps);
+  const f = { kind: "shot", xg: r.xg, score: r.xg * 140 - 8, blockN: r.blockers.length };
+  if (r.blockers.length) f.shotBlocked = true; else if (r.xg < 0.18) f.shotPoor = true; else f.shotGood = true;
+  return f;
+}
+const mirror = p => ({ x: L - p.x, y: p.y, gk: p.gk, n: p.n });
+function evalMark(att, carrier, you, mates) {
+  const a = mirror(att), c = mirror(carrier);
+  const defs = mates.map(mirror);           // our players except you (incl. keeper)
+  const all = defs.concat([mirror(you)]);
+  const f = { kind: "mark" }; let s = 0;
+  const xg = shotXG(a, defs).xg; s += xg * 100;
+  if (xg > 0.18) f.danger = true; else if (xg < 0.06) f.lowThreat = true;
+  const len = dist(c, a), allowed = 1.3 + 0.045 * len;
+  let laneMin = Infinity;
+  for (const d of defs) { const r = segDist(d, c, a); if (r.t < 0.08 || r.t > 0.92) continue; laneMin = Math.min(laneMin, r.d); }
+  if (laneMin < allowed) { f.laneCov = true; s -= 35; } else { f.laneOpen = true; s += 10; }
+  let cov = Infinity; for (const d of defs) if (!d.gk) cov = Math.min(cov, dist(d, a));
+  if (cov < 4.3) { f.covered = true; s = s * 0.3 - 30; } else if (cov > 9) { f.unmarked = true; s += 12; }
+  if (a.x > offsideLine(all) + 0.3 && a.x > c.x) { f.attOffside = true; s -= 40; }
+  if (dist(you, att) > 22) { f.far = true; s -= 60; }
+  f.score = s; f.invalid = !!f.far;
+  return f;
+}
+
+/* ================= generation ================= */
+function makeGen(seed) {
+  const rng = mulberry32(seed);
+  const R = (a, b) => a + (b - a) * rng();
+  const pick = arr => arr[Math.floor(rng() * arr.length)];
+  const nums = (exclude) => { const a = [2,3,4,5,6,7,8,9,10,11,14,17,18,20,23].filter(n => !exclude.includes(n)); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  function place(all, box, minSep, tries = 60) {
+    for (let i = 0; i < tries; i++) {
+      const p = { x: R(box[0], box[1]), y: R(box[2], box[3]) };
+      if (p.x < 1.5 || p.x > L - 1.5 || p.y < 1.5 || p.y > W - 1.5) continue;
+      if (all.every(q => dist(p, q) >= minSep)) return p;
+    }
+    return null;
+  }
+  function near(all, c, rMin, rMax, minSep, angBias) {
+    for (let i = 0; i < 60; i++) {
+      const ang = angBias != null ? angBias + R(-1.1, 1.1) : R(0, Math.PI * 2), r = R(rMin, rMax);
+      const p = { x: c.x + Math.cos(ang) * r, y: c.y + Math.sin(ang) * r };
+      if (p.x < 1.5 || p.x > L - 1.5 || p.y < 1.5 || p.y > W - 1.5) continue;
+      if (all.every(q => dist(p, q) >= minSep)) return p;
+    }
+    return null;
+  }
+  function onLane(all, a, b, minSep) {
+    for (let i = 0; i < 40; i++) {
+      const t = R(0.3, 0.75), dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1, off = R(-1.2, 1.2);
+      const p = { x: a.x + dx * t - dy / len * off, y: a.y + dy * t + dx / len * off };
+      if (all.every(q => dist(p, q) >= minSep)) return p;
+    }
+    return null;
+  }
+  return { rng, R, pick, nums, place, near, onLane };
+}
+
+const ROLE_NUM = { gk: 1, def: 4, mid: 8, wing: 7, st: 9 };
+function carrierBox(role, G) {
+  if (role === "gk") return { x: G.R(4, 7), y: G.R(28, 40) };
+  if (role === "def") return { x: G.R(14, 36), y: G.pick([G.R(6, 16), G.R(24, 44), G.R(52, 62)]) };
+  if (role === "mid") return { x: G.R(36, 62), y: G.R(12, 56) };
+  if (role === "wing") return { x: G.R(62, 88), y: G.rng() < .5 ? G.R(4, 14) : G.R(54, 64) };
+  return { x: G.R(74, 92), y: G.R(18, 50) };
+}
+
+function genPass(G, role, level) {
+  const c = carrierBox(role, G); c.n = ROLE_NUM[role]; c.you = true;
+  const all = [c];
+  const nT = role === "gk" ? 4 + (level > 3 ? 1 : 0) : 4 + (level > 2 ? 1 : 0) + (level > 6 ? 1 : 0);
+  const box = role === "gk" ? [3, 42, 4, 64] : [Math.max(3, c.x - 22), Math.min(101, c.x + 32), 3, 65];
+  const mates = [];
+  const ns = G.nums([c.n]);
+  for (let i = 0; i < nT; i++) { const p = G.place(all, box, 6); if (!p) return null; if (dist(p, c) < 6) { i--; continue; } p.n = ns[i]; mates.push(p); all.push(p); }
+  const opps = [];
+  const on = G.nums([]);
+  let oi = 0;
+  const addOpp = p => { if (!p) return; p.n = on[oi++]; opps.push(p); all.push(p); };
+  addOpp(G.near(all, c, 3.4, 5.5, 3.2, 0));
+  const traps = 1 + (level > 3 ? 1 : 0) + (level > 7 ? 1 : 0);
+  for (let i = 0; i < traps; i++) { const m = G.pick(mates); addOpp(G.onLane(all, c, m, 3.2)); }
+  const markers = 1 + (level > 5 ? 1 : 0);
+  for (let i = 0; i < markers; i++) { const m = G.pick(mates); addOpp(G.near(all, m, 3.1, 3.6, 3.0)); }
+  const extra = 2 + Math.min(level, 4) - traps - markers + 1;
+  const ahead = role === "gk" ? [8, 48, 4, 64] : [Math.max(4, c.x - 6), Math.min(101, c.x + 38), 3, 65];
+  for (let i = 0; i < Math.max(1, extra); i++) addOpp(G.place(all, ahead, 3.5));
+  if (c.x > 50 || mates.some(m => m.x > 55)) { const k = { x: G.R(101, 103.2), y: clamp(34 + (c.y - 34) * 0.15, 31, 37), gk: true, n: 1 }; opps.push(k); all.push(k); }
+  const canShoot = c.x > 72;
+  const options = mates.map(m => ({ id: "p" + m.n, target: m, label: tr("player", { n: m.n }), f: evalPass(c, m, opps) }));
+  if (canShoot) options.push({ id: "shot", target: { x: L, y: 34 }, label: tr("shotLabel"), f: evalShot(c, opps), shot: true });
+  if (canShoot) {
+    const bestPass = Math.max(...options.filter(o => !o.shot).map(o => o.f.score));
+    const sh = options.find(o => o.shot); if (bestPass > sh.f.score + 15) sh.f.better = true;
+  }
+  return { type: role === "gk" ? "gk" : canShoot ? "shoot" : "pass", role, carrier: c, you: c, mates, opps, options };
+}
+
+function genMove(G, role, level) {
+  const box = { def: [24, 46, 5, 63], mid: [40, 66, 10, 58], wing: [64, 88, 4, 64], st: [70, 92, 16, 52] }[role];
+  const you = { x: G.R(box[0], box[1]), y: role === "wing" ? (G.rng() < .5 ? G.R(4, 16) : G.R(52, 64)) : G.R(box[2], box[3]), n: ROLE_NUM[role], you: true };
+  const all = [you];
+  const c = G.near(all, { x: you.x - 14, y: you.y }, 4, 10, 7); if (!c) return null;
+  const ns = G.nums([you.n]); c.n = ns[0]; all.push(c);
+  const mates = [c];
+  const nT = 2 + (level > 4 ? 1 : 0);
+  for (let i = 0; i < nT; i++) { const p = G.place(all, [Math.max(3, you.x - 25), Math.min(100, you.x + 22), 4, 64], 7); if (p) { p.n = ns[i + 1]; mates.push(p); all.push(p); } }
+  const nS = level > 3 ? 4 : 3, spots = [];
+  for (let i = 0; i < nS; i++) {
+    const sp = G.near(all.concat(spots), you, 6, 13, 5.5, null);
+    if (!sp) return null;
+    if (sp.x < 2 || sp.x > 102) return null;
+    sp.l = "ABCD"[i]; spots.push(sp);
+  }
+  const opps = [], on = G.nums([]); let oi = 0;
+  const allX = all.concat(spots);
+  const addOpp = p => { if (!p) return; p.n = on[oi++]; opps.push(p); allX.push(p); };
+  addOpp(G.near(allX, c, 3.4, 5.5, 3.2, 0));
+  const traps = 1 + (level > 5 ? 1 : 0);
+  for (let i = 0; i < traps; i++) addOpp(G.onLane(allX, c, G.pick(spots), 3.2));
+  addOpp(G.near(allX, G.pick(spots), 3.0, 3.5, 2.6));
+  addOpp(G.near(allX, you, 3.2, 4, 3.0));
+  const extra = 1 + Math.min(level, 4);
+  for (let i = 0; i < extra; i++) addOpp(G.place(allX, [Math.max(4, c.x - 4), Math.min(101, you.x + 30), 3, 65], 3.5));
+  if (you.x > 50) opps.push({ x: G.R(101, 103.2), y: clamp(34 + (c.y - 34) * 0.15, 31, 37), gk: true, n: 1 });
+  const options = spots.map(sp => {
+    const f = evalPass(c, sp, opps);
+    if (mates.some(m => m !== c && dist(m, sp) < 6)) { f.crowd = true; f.score -= 30; }
+    return { id: "s" + sp.l, target: sp, label: tr("spot", { l: sp.l }), f };
+  });
+  return { type: "move", role, carrier: c, you, mates, opps, spots, options };
+}
+
+function genMark(G, role, level) {
+  const c = { x: G.R(32, 55), y: G.R(10, 58) };
+  const on = G.nums([]); c.n = on[0];
+  const ourGK = { x: 2.5, y: 34, gk: true, n: 1 };
+  const all = [c, ourGK];
+  const nA = level > 3 ? 4 : 3, atts = [];
+  for (let i = 0; i < nA; i++) { const p = G.place(all, [8, Math.min(42, c.x - 2), 5, 63], 7); if (!p) return null; p.n = on[i + 1]; atts.push(p); all.push(p); }
+  const you = G.place(all, [12, 30, 16, 52], 4); if (!you) return null;
+  you.n = ROLE_NUM[role === "mid" ? "mid" : "def"]; you.you = true; all.push(you);
+  const ns = G.nums([you.n, 1]);
+  const mates = [ourGK]; let ni = 0;
+  const nM = 2 + (level > 5 ? 1 : 0);
+  const marked = new Set();
+  for (let i = 0; i < nM; i++) {
+    const a = G.pick(atts); if (marked.has(a)) continue; marked.add(a);
+    const p = G.near(all, a, 3.1, 3.7, 3.0, Math.PI); if (p) { p.n = ns[ni++]; mates.push(p); all.push(p); }
+  }
+  const pLane = G.onLane(all, c, G.pick(atts), 3.2); if (pLane) { pLane.n = ns[ni++]; mates.push(pLane); all.push(pLane); }
+  for (let i = 0; i < 1 + (level > 2 ? 1 : 0); i++) { const p = G.place(all, [6, 40, 4, 64], 5); if (p) { p.n = ns[ni++]; mates.push(p); all.push(p); } }
+  const options = atts.map(a => ({ id: "a" + a.n, target: a, label: tr("player", { n: a.n }), f: evalMark(a, c, you, mates) }));
+  return { type: "mark", role, carrier: c, you, mates, opps: [c].concat(atts), atts, options };
+}
+
+function typesFor(role) {
+  return { gk: ["pass"], def: ["pass", "pass", "mark", "move"], mid: ["pass", "move", "mark", "pass"], wing: ["pass", "move", "pass"], st: ["pass", "move", "pass"] }[role];
+}
+function generatePuzzle(seed, roleSel, level) {
+  const G = makeGen(seed);
+  const role = roleSel === "mix" ? G.pick(["gk", "def", "mid", "mid", "wing", "st"]) : roleSel;
+  const kind = G.pick(typesFor(role));
+  const margin = clamp(16 - level, 6, 15);
+  for (let attempt = 0; attempt < 400; attempt++) {
+    const P = kind === "pass" ? genPass(G, role, level) : kind === "move" ? genMove(G, role, level) : genMark(G, role, level);
+    if (!P) continue;
+    const sorted = P.options.slice().sort((a, b) => b.f.score - a.f.score);
+    const best = sorted[0], second = sorted[1];
+    if (!second || best.f.invalid) continue;
+    const m = attempt > 300 ? margin / 2 : margin;
+    if (best.f.score - second.f.score < m) continue;
+    if (P.type !== "mark" && best.f.score < 8) continue;
+    if (best.f.covered || best.f.attOffside || best.f.marked) continue;
+    if (!P.options.some(o => o.f.invalid || o.f.score < best.f.score - 25)) continue;
+    P.best = best; P.seed = seed; P.level = level;
+    return P;
+  }
+  return generatePuzzle((seed * 7 + 13) >>> 0, roleSel, level);
+}
+
+/* ================= explanations ================= */
+function reasonsFor(o, P) {
+  const f = o.f, r = [];
+  const add = (k, v) => r.push(tr("r." + k, v));
+  if (f.kind === "shot") {
+    if (f.shotBlocked) add("shotBlocked", { k: f.blockN });
+    if (f.shotPoor) add("shotPoor");
+    if (f.shotGood) add("shotGood");
+    if (f.better) add("better");
+    return r;
+  }
+  if (f.kind === "mark") {
+    ["far", "attOffside", "covered", "laneCov", "danger", "unmarked", "laneOpen", "lowThreat"].forEach(k => f[k] && add(k));
+    return r.slice(0, 3);
+  }
+  const neg = [], pos = [];
+  const N = (k, v) => neg.push(tr("r." + k, v)), Pz = (k, v) => pos.push(tr("r." + k, v));
+  if (f.offside) N("offside");
+  if (f.blocked) N("blocked", { n: f.blocked.n });
+  if (f.crowd) N("crowd");
+  if (f.marked) N("marked");
+  if (f.dangerOwn) N("dangerOwn");
+  if (f.long) N("long");
+  if (f.tight && !f.blocked) N("tight");
+  if (f.pressure) N("pressure");
+  if (!f.invalid) {
+    if (f.box) Pz("box"); else if (f.open) Pz("open");
+    if (f.dx > 4) Pz("forward", { d: Math.round(f.dx) }); else if (f.dx < -3) Pz("backward"); else Pz("square");
+  }
+  r.push(...(f.invalid ? neg.concat(pos) : pos.concat(neg)));
+  return r.slice(0, 3);
+}
+function joinList(arr) {
+  if (arr.length <= 1) return arr.join("");
+  return arr.slice(0, -1).join(", ") + " " + tr("and") + " " + arr[arr.length - 1];
+}
+function sentence(o, P) { const rs = reasonsFor(o, P); const s = joinList(rs); return s ? s.charAt(0).toUpperCase() + s.slice(1) + "." : ""; }
+function tipFor(choice, P) {
+  const f = choice.f;
+  if (f.kind === "mark") return 7;
+  if (f.kind === "shot") return 6;
+  if (f.offside) return 4;
+  if (f.blocked || f.tight) return 2;
+  if (f.dangerOwn) return 8;
+  if (f.crowd) return 5;
+  if (f.marked || f.pressure) return 1;
+  if (P.best.shot) return 6;
+  if (P.type === "gk") return 9;
+  if (f.long) return 3;
+  return 3;
+}
+
+/* ================= rendering ================= */
+const NS = "http://www.w3.org/2000/svg";
+const svg = document.getElementById("pitch");
+function el(name, attrs, parent) {
+  const e = document.createElementNS(NS, name);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function drawPitch() {
+  svg.innerHTML = "";
+  const defs = el("defs", {}, svg);
+  [["good", css("--good")], ["bad", css("--bad")], ["chalk", "#ffffff"], ["you", css("--you")]].forEach(([id, col]) => {
+    const m = el("marker", { id: "ar-" + id, viewBox: "0 0 10 10", refX: "8", refY: "5", markerWidth: "4", markerHeight: "4", orient: "auto-start-reverse" }, defs);
+    el("path", { d: "M0,0 L10,5 L0,10 z", fill: col }, m);
+  });
+  const g = el("g", {}, svg);
+  el("rect", { x: -4, y: -4, width: 113, height: 76, fill: css("--pitch-b") }, g);
+  for (let i = 0; i < 12; i++) el("rect", { x: i * L / 12, y: 0, width: L / 12, height: W, fill: i % 2 ? css("--pitch-b") : css("--pitch-a") }, g);
+  const ln = { fill: "none", stroke: css("--chalk"), "stroke-width": 0.3 };
+  el("rect", Object.assign({ x: 0, y: 0, width: L, height: W }, ln), g);
+  el("line", Object.assign({ x1: L / 2, y1: 0, x2: L / 2, y2: W }, ln), g);
+  el("circle", Object.assign({ cx: L / 2, cy: W / 2, r: 9.15 }, ln), g);
+  el("circle", { cx: L / 2, cy: W / 2, r: 0.4, fill: css("--chalk") }, g);
+  [[0, 1], [L, -1]].forEach(([x0, s]) => {
+    el("rect", Object.assign({ x: s > 0 ? 0 : L - 16.5, y: 13.84, width: 16.5, height: 40.32 }, ln), g);
+    el("rect", Object.assign({ x: s > 0 ? 0 : L - 5.5, y: 24.84, width: 5.5, height: 18.32 }, ln), g);
+    el("circle", { cx: x0 + s * 11, cy: 34, r: 0.4, fill: css("--chalk") }, g);
+    const ax = x0 + s * 16.5, dy = Math.sqrt(9.15 * 9.15 - 5.5 * 5.5);
+    el("path", Object.assign({ d: `M ${ax} ${34 - dy} A 9.15 9.15 0 0 ${s > 0 ? 1 : 0} ${ax} ${34 + dy}` }, ln), g);
+    el("rect", { x: s > 0 ? -2 : L, y: GY1, width: 2, height: GY2 - GY1, fill: "rgba(255,255,255,.25)", stroke: css("--chalk"), "stroke-width": 0.3 }, g);
+  });
+  return el("g", {}, svg);
+}
+function drawPlayer(layer, p, team, opts = {}) {
+  const g = el("g", { class: "pl", transform: `translate(${p.x} ${p.y})` }, layer);
+  if (p.you) {
+    el("circle", { r: 2.25, fill: "none", stroke: css("--you"), "stroke-width": 0.4 }, g);
+    const t = el("text", { y: -2.9, "text-anchor": "middle", "font-size": 1.9, fill: css("--you"), stroke: "rgba(0,0,0,.55)", "stroke-width": 0.35, "paint-order": "stroke" }, g);
+    t.textContent = tr("you");
+  }
+  const col = team === "team" ? css("--team") : css("--opp");
+  el("circle", { class: "body", r: 1.45, fill: p.gk ? (team === "team" ? "#1b9aa6" : "#7a3db8") : col, stroke: "#fff", "stroke-width": 0.3 }, g);
+  const tx = el("text", { "text-anchor": "middle", "dominant-baseline": "central", "font-size": 1.6, fill: "#fff" }, g);
+  tx.textContent = p.n;
+  p._g = g;
+  return g;
+}
+function makeClickable(g, opt, hitR) {
+  g.classList.add("opt");
+  g.setAttribute("tabindex", "0");
+  g.setAttribute("role", "button");
+  g.setAttribute("aria-label", opt.label);
+  el("circle", { class: "hit", r: hitR || 3.6 }, g).parentNode.insertBefore(g.lastChild, g.firstChild);
+  g.addEventListener("click", () => answer(opt));
+  g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); answer(opt); } });
+}
+let ballEl = null, overlay = null;
+function render(P) {
+  const layer = drawPitch();
+  overlay = el("g", {}, layer);
+  const pl = el("g", {}, layer);
+  // offside line on easy levels for attacking puzzles
+  if (P.type !== "mark" && P.level <= 3) {
+    const x = offsideLine(P.opps);
+    if (x > L / 2 + 0.5) el("line", { x1: x, y1: 0, x2: x, y2: W, stroke: css("--you"), "stroke-width": 0.25, "stroke-dasharray": "1 1", opacity: 0.8 }, overlay);
+  }
+  if (P.type === "move") {
+    P.spots.forEach(sp => {
+      el("line", { x1: P.you.x, y1: P.you.y, x2: sp.x, y2: sp.y, stroke: "#fff", "stroke-width": 0.25, "stroke-dasharray": "0.8 0.8", opacity: 0.6 }, overlay);
+      const g = el("g", { class: "spot", transform: `translate(${sp.x} ${sp.y})` }, pl);
+      el("circle", { class: "ring", r: 1.9 }, g);
+      const t = el("text", { "text-anchor": "middle", "dominant-baseline": "central", "font-size": 2, fill: "#fff", "font-family": "Barlow Condensed, sans-serif", "font-weight": 700 }, g);
+      t.textContent = sp.l;
+      sp._g = g;
+      makeClickable(g, P.options.find(o => o.target === sp), 3.4);
+    });
+  }
+  const teamPlayers = P.type === "mark" ? P.mates.concat([P.you]) : [P.you].concat(P.mates.filter(m => m !== P.you));
+  if (P.type === "move" && !teamPlayers.includes(P.carrier)) teamPlayers.push(P.carrier);
+  teamPlayers.forEach(p => drawPlayer(pl, p, "team"));
+  P.opps.forEach(p => drawPlayer(pl, p, "opp"));
+  P.options.forEach(o => {
+    if (o.shot) {
+      const g = el("g", { class: "goal" }, pl);
+      el("rect", { class: "goal-hit", x: L - 1, y: GY1 - 2, width: 4.5, height: GY2 - GY1 + 4, rx: 0.6 }, g);
+      el("rect", { x: L, y: GY1, width: 2, height: GY2 - GY1, fill: "none", stroke: css("--you"), "stroke-width": 0.35, "stroke-dasharray": "0.8 0.5" }, g);
+      g.classList.add("opt"); g.setAttribute("tabindex", "0"); g.setAttribute("role", "button"); g.setAttribute("aria-label", o.label);
+      g.addEventListener("click", () => answer(o));
+      g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); answer(o); } });
+    } else if (P.type !== "move") {
+      makeClickable(o.target._g, o);
+    }
+  });
+  fitView(P);
+  const c = P.carrier;
+  ballEl = el("circle", { cx: c.x + 1.3, cy: c.y + 1.3, r: 0.75, fill: "#fff", stroke: "#111", "stroke-width": 0.18 }, pl);
+}
+function fitView(P) {
+  const pts = [P.you, P.carrier].concat(P.mates, P.opps.filter(o => !o.gk), P.spots || []);
+  if (P.options.some(o => o.shot)) pts.push({ x: L + 2, y: 34 });
+  let x0 = Math.min(...pts.map(p => p.x)) - 7, x1 = Math.max(...pts.map(p => p.x)) + 7;
+  let y0 = Math.min(...pts.map(p => p.y)) - 7, y1 = Math.max(...pts.map(p => p.y)) + 7;
+  const cw = document.querySelector(".pitch-wrap").clientWidth, narrow = cw > 0 && cw < 600;
+  const ratio = narrow ? 1.15 : 113 / 76, minW = narrow ? 40 : 62;
+  let w = Math.max(x1 - x0, minW, (y1 - y0) * ratio), h = w / ratio;
+  if (h > 76) { h = 76; w = Math.min(113, Math.max(w, h * ratio)); }
+  if (w > 113) { w = 113; h = Math.min(76, w / ratio); }
+  let cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  let vx = clamp(cx - w / 2, -4, 109 - w), vy = clamp(cy - h / 2, -4, 72 - h);
+  svg.setAttribute("viewBox", `${vx.toFixed(2)} ${vy.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`);
+}
+function arrow(a, b, kind, layer) {
+  const len = dist(a, b) || 1, ux = (b.x - a.x) / len, uy = (b.y - a.y) / len;
+  const sx = a.x + ux * 2, sy = a.y + uy * 2, ex = b.x - ux * 2.1, ey = b.y - uy * 2.1;
+  const col = kind === "good" ? css("--good") : kind === "bad" ? css("--bad") : kind === "you" ? css("--you") : "#ffffff";
+  return el("line", { x1: sx, y1: sy, x2: ex, y2: ey, stroke: col, "stroke-width": kind === "chalk" ? 0.3 : 0.6, "marker-end": `url(#ar-${kind})`, "stroke-dasharray": kind === "chalk" ? "1 0.8" : "none", "stroke-linecap": "round", opacity: kind === "chalk" ? 0.85 : 1 }, layer || overlay);
+}
+function ring(p, col) { el("circle", { cx: p.x, cy: p.y, r: 2.3, fill: "none", stroke: col, "stroke-width": 0.5 }, overlay); }
+function animate(node, from, to, ms, attrX, attrY, off) {
+  return new Promise(res => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) { node.setAttribute(attrX, to.x + off); node.setAttribute(attrY, to.y + off); return res(); }
+    const t0 = performance.now();
+    const step = now => {
+      const k = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+      node.setAttribute(attrX, from.x + (to.x - from.x) * e + off); node.setAttribute(attrY, from.y + (to.y - from.y) * e + off);
+      k < 1 ? requestAnimationFrame(step) : res();
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+/* ================= game flow ================= */
+let P = null, answered = false, hintUsed = false, seedCounter = 0;
+function newSeed() { return (Date.now() ^ Math.floor(Math.random() * 0x7fffffff) ^ (++seedCounter * 2654435761)) >>> 0; }
+function nextPuzzle() {
+  P = generatePuzzle(newSeed(), S.role, levelOf());
+  answered = false; hintUsed = false;
+  render(P);
+  updateTexts();
+  const fb = document.getElementById("feedback");
+  fb.className = "feedback idle"; fb.textContent = tr("idle");
+  document.getElementById("btnNext").disabled = true;
+  document.getElementById("btnHint").disabled = false;
+  document.getElementById("btnSkip").disabled = false;
+}
+function showHint() {
+  if (!P || answered || hintUsed) return;
+  hintUsed = true;
+  const from = P.type === "mark" ? P.carrier : P.carrier;
+  P.options.forEach(o => {
+    if (o.shot) return;
+    const ln = arrow(from, o.target, "chalk");
+    const f = o.f;
+    if (f.blocked) ring(f.blocked, css("--warn"));
+    if (f.kind === "mark" && f.laneCov) ln.setAttribute("opacity", 0.3);
+    if (f.blocked) ln.setAttribute("opacity", 0.35);
+  });
+  document.getElementById("btnHint").disabled = true;
+  document.getElementById("btnHint").textContent = tr("hintUsed");
+}
+async function answer(opt) {
+  if (!P || answered) return;
+  answered = true;
+  const best = P.best, ok = opt === best;
+  overlay.innerHTML = "";
+  if (P.type === "move") {
+    const youG = P.you._g;
+    await new Promise(res => {
+      const from = { x: P.you.x, y: P.you.y }, to = opt.target, t0 = performance.now();
+      const step = now => { const k = Math.min(1, (now - t0) / 380), e = 1 - Math.pow(1 - k, 3); youG.setAttribute("transform", `translate(${from.x + (to.x - from.x) * e} ${from.y + (to.y - from.y) * e})`); k < 1 ? requestAnimationFrame(step) : res(); };
+      matchMedia("(prefers-reduced-motion: reduce)").matches ? (youG.setAttribute("transform", `translate(${to.x} ${to.y})`), res()) : requestAnimationFrame(step);
+    });
+  }
+  if (P.type === "mark") {
+    const a = opt.target, to = { x: a.x - 1.8, y: a.y + (34 - a.y) * 0.06 };
+    arrow(P.you, a, ok ? "good" : "bad");
+    if (!ok) arrow(P.you, best.target, "good");
+    ring(best.target, css("--good"));
+    if (!ok) ring(a, css("--bad"));
+  } else {
+    if (!ok) arrow(P.carrier, best.target, "good");
+    arrow(P.carrier, opt.target, ok ? "good" : "bad");
+    if (opt.f.blocked) ring(opt.f.blocked, css("--warn"));
+    const end = opt.f.blocked ? opt.f.blocked : opt.target;
+    await animate(ballEl, { x: P.carrier.x, y: P.carrier.y }, opt.shot ? { x: L + 0.6, y: 34 + (Math.random() - 0.5) * 5 } : end, Math.min(700, 250 + dist(P.carrier, end) * 14), "cx", "cy", opt.shot ? 0 : 1.1);
+  }
+  // scoring
+  S.played++; const rs = S.roleStats[P.role]; rs.played++;
+  const mixRs = S.role === "mix" ? S.roleStats.mix : null; if (mixRs) mixRs.played++;
+  let pts = 0;
+  if (ok) {
+    S.right++; rs.right++; if (mixRs) mixRs.right++;
+    S.streak++; S.bestStreak = Math.max(S.bestStreak, S.streak);
+    pts = Math.round((10 + 2 * P.level + Math.min(S.streak - 1, 10)) * (hintUsed ? 0.5 : 1));
+    S.score += pts;
+  } else S.streak = 0;
+  save();
+  showFeedback(opt, ok, pts);
+  updateBoard();
+  document.getElementById("btnNext").disabled = false;
+  document.getElementById("btnHint").disabled = true;
+  document.getElementById("btnSkip").disabled = true;
+  document.getElementById("btnNext").focus({ preventScroll: true });
+}
+let lastFeedback = null;
+function showFeedback(opt, ok, pts) {
+  lastFeedback = { opt, ok, pts };
+  const fb = document.getElementById("feedback");
+  fb.className = "feedback";
+  fb.innerHTML = "";
+  const v = document.createElement("div");
+  v.className = "verdict " + (ok ? "ok" : "no");
+  v.textContent = opt ? (ok ? tr("correct") : tr("wrong")) : tr("skipped");
+  if (ok) { const s = document.createElement("span"); s.className = "pts"; s.textContent = tr("pts", { p: pts }); v.appendChild(s); }
+  fb.appendChild(v);
+  const line = (label, o) => { const p = document.createElement("p"); p.className = "line"; const b = document.createElement("b"); b.textContent = label + " – " + o.label + ": "; p.appendChild(b); p.appendChild(document.createTextNode(sentence(o, P))); fb.appendChild(p); };
+  if (opt && !ok) line(tr("yourChoice"), opt);
+  line(tr("bestChoice"), P.best);
+  const tipIdx = opt && !ok ? tipFor(opt, P) : tipFor(P.best, P);
+  const pr = tr("p")[tipIdx];
+  const tp = document.createElement("p"); tp.className = "tip";
+  const st = document.createElement("strong"); st.textContent = tr("tip"); tp.appendChild(st);
+  tp.appendChild(document.createTextNode(pr[0] + ". " + pr[1])); fb.appendChild(tp);
+}
+function skip() {
+  if (!P || answered) return;
+  answered = true;
+  overlay.innerHTML = "";
+  if (P.type === "mark") { arrow(P.you, P.best.target, "good"); ring(P.best.target, css("--good")); }
+  else arrow(P.carrier, P.best.target, "good");
+  S.streak = 0; save(); updateBoard();
+  showFeedback(null, false, 0);
+  document.getElementById("btnNext").disabled = false;
+  document.getElementById("btnHint").disabled = true;
+  document.getElementById("btnSkip").disabled = true;
+}
+
+/* ================= UI text ================= */
+function updateBoard() {
+  document.getElementById("vScore").textContent = S.score;
+  document.getElementById("vStreak").textContent = S.streak;
+  document.getElementById("vBest").textContent = S.bestStreak;
+  document.getElementById("vAcc").textContent = S.played ? Math.round(100 * S.right / S.played) + "%" : "–";
+  const lv = levelOf();
+  document.getElementById("vLevel").textContent = lv;
+  document.getElementById("lvlFill").style.width = lv >= 10 ? "100%" : ((S.right % 6) / 6 * 100) + "%";
+}
+function renderRoles() {
+  const nav = document.getElementById("roles"); nav.innerHTML = "";
+  const lab = document.createElement("span"); lab.className = "label"; lab.textContent = tr("role"); nav.appendChild(lab);
+  ROLE_KEYS.forEach(r => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.id = "role-" + r;
+    b.textContent = tr("roles." + r); b.setAttribute("aria-pressed", S.role === r ? "true" : "false");
+    b.addEventListener("click", () => { if (S.role === r) return; S.role = r; save(); renderRoles(); nextPuzzle(); });
+    nav.appendChild(b);
+  });
+}
+function updateTexts() {
+  document.documentElement.lang = lang === "no" ? "no" : "en";
+  document.title = lang === "no" ? "Fotball-IQ" : "Football IQ";
+  document.getElementById("appTitle").innerHTML = lang === "no" ? "Fotball<span>-IQ</span>" : "Football <span>IQ</span>";
+  document.getElementById("appSub").textContent = tr("sub");
+  document.getElementById("btnPrinciples").textContent = tr("principles");
+  document.getElementById("btnStats").textContent = tr("stats");
+  document.getElementById("langNo").setAttribute("aria-pressed", lang === "no");
+  document.getElementById("langEn").setAttribute("aria-pressed", lang === "en");
+  [["kScore", "score"], ["kStreak", "streak"], ["kBest", "best"], ["kAcc", "acc"], ["kLevel", "level"]].forEach(([id, k]) => document.getElementById(id).textContent = tr(k));
+  document.getElementById("btnHint").textContent = hintUsed ? tr("hintUsed") : tr("hint");
+  document.getElementById("btnSkip").textContent = tr("skip");
+  document.getElementById("btnNext").textContent = tr("next");
+  if (P) {
+    document.getElementById("qText").textContent = tr("q." + P.type);
+    document.getElementById("qTag").textContent = tr("roles." + P.role) + " · " + tr("types." + P.type);
+    document.getElementById("qNum").textContent = tr("puzzle") + " #" + (P.seed % 100000).toString().padStart(5, "0");
+    P.options.forEach(o => { o.label = o.shot ? tr("shotLabel") : o.target.l ? tr("spot", { l: o.target.l }) : tr("player", { n: o.target.n }); });
+    // re-label "YOU"
+    svg.querySelectorAll(".pl").forEach(g => { const t = g.querySelector("text"); if (t && t.getAttribute("font-size") === "1.9") t.textContent = tr("you"); });
+  }
+  const lg = document.getElementById("legend"); lg.innerHTML = "";
+  const item = (col, txt, ringc) => { const s = document.createElement("span"); const d = document.createElement("i"); d.className = "dot"; d.style.background = col; if (ringc) d.style.boxShadow = "0 0 0 2px " + ringc; s.appendChild(d); s.appendChild(document.createTextNode(txt)); lg.appendChild(s); };
+  item("var(--team)", tr("legend.you"), "var(--you)");
+  item("var(--team)", tr("legend.team"));
+  item("var(--opp)", tr("legend.opp"));
+  if (P && P.type === "move") item("rgba(255,255,255,.4)", tr("legend.spot"));
+  if (P && P.type !== "mark" && P.level <= 3 && offsideLine(P.opps) > L / 2 + 0.5) item("var(--you)", tr("legend.off"));
+  if (answered && lastFeedback) showFeedback(lastFeedback.opt, lastFeedback.ok, lastFeedback.pts);
+  else if (!answered) { const fb = document.getElementById("feedback"); fb.className = "feedback idle"; fb.textContent = tr("idle"); }
+  renderRoles();
+}
+function setLang(l) { lang = l; S.lang = l; save(); updateTexts(); }
+
+function openPrinciples() {
+  document.getElementById("pTitle").textContent = tr("principles");
+  const ol = document.getElementById("pList"); ol.innerHTML = "";
+  tr("p").forEach(([h, b]) => { const li = document.createElement("li"); const s = document.createElement("b"); s.textContent = h + ". "; li.appendChild(s); li.appendChild(document.createTextNode(b)); ol.appendChild(li); });
+  document.querySelectorAll("#dlgPrinciples [data-close]").forEach(b => b.textContent = tr("close"));
+  document.getElementById("dlgPrinciples").showModal();
+}
+function openStats() {
+  document.getElementById("sTitle").textContent = tr("statsTitle");
+  const tb = document.getElementById("sTable");
+  tb.innerHTML = "";
+  const hr = tb.insertRow(); [tr("colRole"), tr("colPlayed"), tr("colRight"), tr("colAcc")].forEach(h => { const th = document.createElement("th"); th.textContent = h; hr.appendChild(th); });
+  ["gk", "def", "mid", "wing", "st"].forEach(r => {
+    const s = S.roleStats[r], row = tb.insertRow();
+    [tr("roles." + r), s.played, s.right, s.played ? Math.round(100 * s.right / s.played) + "%" : "–"].forEach(v => row.insertCell().textContent = v);
+  });
+  resetRow(false);
+  document.getElementById("dlgStats").showModal();
+}
+function resetRow(asking) {
+  const row = document.getElementById("sRow"); row.innerHTML = "";
+  if (asking) {
+    const d = document.createElement("div"); d.className = "confirm"; d.textContent = tr("resetAsk"); row.appendChild(d);
+    const y = document.createElement("button"); y.className = "btn"; y.type = "button"; y.textContent = tr("yes");
+    y.onclick = () => { const keepLang = lang, keepRole = S.role; S = freshStats(); S.lang = keepLang; S.role = keepRole; save(); updateBoard(); document.getElementById("dlgStats").close(); nextPuzzle(); };
+    const n = document.createElement("button"); n.className = "btn primary"; n.type = "button"; n.textContent = tr("no"); n.onclick = () => resetRow(false);
+    row.appendChild(y); row.appendChild(n);
+  } else {
+    const r = document.createElement("button"); r.className = "btn"; r.type = "button"; r.textContent = tr("reset"); r.onclick = () => resetRow(true);
+    const c = document.createElement("button"); c.className = "btn primary"; c.type = "button"; c.textContent = tr("close"); c.onclick = () => document.getElementById("dlgStats").close();
+    row.appendChild(r); row.appendChild(c);
+  }
+}
+
+/* ================= boot ================= */
+load();
+lang = S.lang || ((navigator.language || "").toLowerCase().match(/^(nb|nn|no)/) ? "no" : (navigator.language ? "en" : "no"));
+document.getElementById("langNo").onclick = () => setLang("no");
+document.getElementById("langEn").onclick = () => setLang("en");
+document.getElementById("btnNext").onclick = nextPuzzle;
+document.getElementById("btnHint").onclick = showHint;
+document.getElementById("btnSkip").onclick = skip;
+document.getElementById("btnPrinciples").onclick = openPrinciples;
+document.getElementById("btnStats").onclick = openStats;
+document.querySelectorAll("dialog [data-close]").forEach(b => b.onclick = () => b.closest("dialog").close());
+let rsz; window.addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(() => P && fitView(P), 150); });
+document.addEventListener("keydown", e => { if (e.key === "n" && answered && !document.querySelector("dialog[open]")) nextPuzzle(); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => P && !answered && render(P));
+updateBoard();
+nextPuzzle();
+</script>
+</body>
+</html>
